@@ -39,6 +39,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Semaphore;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -67,6 +68,7 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
     private BluetoothAdapter mBluetoothAdapter;
     private final Map<String, BluetoothDeviceCache> mDevices = new HashMap<>();
     private LogLevel logLevel = LogLevel.EMERGENCY;
+    private Semaphore bleSem = new Semaphore(1);
 
     // Pending call and result for startScan, in the case where permissions are needed
     private MethodCall pendingCall;
@@ -257,6 +259,7 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
             case "discoverServices":
             {
                 String deviceId = (String)call.arguments;
+                acquireBle();
                 try {
                     BluetoothGatt gatt = locateGatt(deviceId);
                     if(gatt.discoverServices()) {
@@ -267,6 +270,7 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
                 } catch(Exception e) {
                     result.error("discover_services_error", e.getMessage(), e);
                 }
+                bleSem.release();
                 break;
             }
 
@@ -308,10 +312,13 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
                     return;
                 }
 
+                acquireBle();
+
                 if(gattServer.readCharacteristic(characteristic)) {
                     result.success(null);
                 } else {
                     result.error("read_characteristic_error", "unknown reason, may occur if readCharacteristic was called before last read finished.", null);
+                    bleSem.release();
                 }
                 break;
             }
@@ -339,10 +346,13 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
                     return;
                 }
 
+                acquireBle();
+
                 if(gattServer.readDescriptor(descriptor)) {
                     result.success(null);
                 } else {
                     result.error("read_descriptor_error", "unknown reason, may occur if readDescriptor was called before last read finished.", null);
+                    bleSem.release();
                 }
                 break;
             }
@@ -380,8 +390,11 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
                     characteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
                 }
 
+                acquireBle();
+
                 if(!gattServer.writeCharacteristic(characteristic)){
                     result.error("write_characteristic_error", "writeCharacteristic failed", null);
+                    bleSem.release();
                     return;
                 }
 
@@ -417,8 +430,11 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
                     result.error("write_descriptor_error", "could not set the local value for descriptor", null);
                 }
 
+                acquireBle();
+
                 if(!gattServer.writeDescriptor(descriptor)){
                     result.error("write_descriptor_error", "writeCharacteristic failed", null);
+                    bleSem.release();
                     return;
                 }
 
@@ -471,18 +487,24 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
                     value = BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE;
                 }
 
+                acquireBle();
+
                 if(!gattServer.setCharacteristicNotification(characteristic, request.getEnable())){
                     result.error("set_notification_error", "could not set characteristic notifications to :" + request.getEnable(), null);
+                    bleSem.release();
                     return;
                 }
 
                 if(!cccDescriptor.setValue(value)) {
                     result.error("set_notification_error", "error when setting the descriptor value to: " + value, null);
+                    bleSem.release();
                     return;
                 }
 
+
                 if(!gattServer.writeDescriptor(cccDescriptor)) {
                     result.error("set_notification_error", "error when writing the descriptor", null);
+                    bleSem.release();
                     return;
                 }
 
@@ -669,6 +691,16 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
         }
     }
 
+    private void acquireBle() {
+        try {
+            bleSem.acquire();
+            log(LogLevel.INFO, "acquired BLE semaphore");
+        }
+        catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
     private ScanCallback scanCallback21;
 
     @TargetApi(21)
@@ -771,6 +803,7 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
                 p.addServices(ProtoMaker.from(gatt.getDevice(), s, gatt));
             }
             invokeMethodUIThread("DiscoverServicesResult", p.build().toByteArray());
+            bleSem.release();
         }
 
         @Override
@@ -780,6 +813,7 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
             p.setRemoteId(gatt.getDevice().getAddress());
             p.setCharacteristic(ProtoMaker.from(gatt.getDevice(), characteristic, gatt));
             invokeMethodUIThread("ReadCharacteristicResponse", p.build().toByteArray());
+            bleSem.release();
         }
 
         @Override
@@ -793,6 +827,7 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
             p.setRequest(request);
             p.setSuccess(status == BluetoothGatt.GATT_SUCCESS);
             invokeMethodUIThread("WriteCharacteristicResponse", p.build().toByteArray());
+            bleSem.release();
         }
 
         @Override
@@ -830,6 +865,7 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
             p.setRequest(q);
             p.setValue(ByteString.copyFrom(descriptor.getValue()));
             invokeMethodUIThread("ReadDescriptorResponse", p.build().toByteArray());
+            bleSem.release();
         }
 
         @Override
@@ -852,6 +888,9 @@ public class FlutterBluePlugin implements MethodCallHandler, RequestPermissionsR
                 q.setCharacteristic(ProtoMaker.from(gatt.getDevice(), descriptor.getCharacteristic(), gatt));
                 invokeMethodUIThread("SetNotificationResponse", q.build().toByteArray());
             }
+
+            bleSem.release();
+            log(LogLevel.INFO, "released BLE semaphore");
         }
 
         @Override
