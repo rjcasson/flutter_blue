@@ -292,6 +292,12 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                 // If device is already connected, return error
                 if(mDevices.containsKey(deviceId) && isConnected) {
                     result.error("already_connected", "connection with device already exists", null);
+                    BluetoothDeviceCache cache = mDevices.remove(deviceId);
+                    if(cache != null) {
+                        BluetoothGatt gattServer = cache.gatt;
+                        gattServer.disconnect();
+                        gattServer.close();
+                    }
                     return;
                 }
 
@@ -301,6 +307,12 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                         result.success(null);
                     } else {
                         result.error("reconnect_error", "error when reconnecting to device", null);
+                        BluetoothDeviceCache cache = mDevices.remove(deviceId);
+                        if(cache != null) {
+                            BluetoothGatt gattServer = cache.gatt;
+                            gattServer.disconnect();
+                            gattServer.close();
+                        }
                     }
                     return;
                 }
@@ -326,9 +338,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                 if(cache != null) {
                     BluetoothGatt gattServer = cache.gatt;
                     gattServer.disconnect();
-                    if(state == BluetoothProfile.STATE_DISCONNECTED) {
-                        gattServer.close();
-                    }
+                    gattServer.close();
                 }
                 result.success(null);
                 break;
@@ -712,6 +722,14 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                             break;
                         case BluetoothAdapter.STATE_TURNING_OFF:
                             sink.success(Protos.BluetoothState.newBuilder().setState(Protos.BluetoothState.State.TURNING_OFF).build().toByteArray());
+                            for (Map.Entry<String, BluetoothDeviceCache> device : mDevices.entrySet()) {
+                                BluetoothDeviceCache cache = mDevices.remove(device.getKey());
+                                if (cache != null) {
+                                    BluetoothGatt gattServer = cache.gatt;
+                                    gattServer.disconnect();
+                                    gattServer.close();
+                                }
+                            }
                             break;
                         case BluetoothAdapter.STATE_ON:
                             sink.success(Protos.BluetoothState.newBuilder().setState(Protos.BluetoothState.State.ON).build().toByteArray());
