@@ -297,6 +297,8 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                         BluetoothGatt gattServer = cache.gatt;
                         gattServer.disconnect();
                         gattServer.close();
+                        gattServer = null;
+                        cache = null;
                     }
                     return;
                 }
@@ -312,6 +314,8 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                             BluetoothGatt gattServer = cache.gatt;
                             gattServer.disconnect();
                             gattServer.close();
+                            gattServer = null;
+                            cache = null;
                         }
                     }
                     return;
@@ -339,6 +343,8 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                     BluetoothGatt gattServer = cache.gatt;
                     gattServer.disconnect();
                     gattServer.close();
+                    gattServer = null;
+                    cache = null;
                 }
                 result.success(null);
                 break;
