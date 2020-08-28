@@ -728,13 +728,17 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                             break;
                         case BluetoothAdapter.STATE_TURNING_OFF:
                             sink.success(Protos.BluetoothState.newBuilder().setState(Protos.BluetoothState.State.TURNING_OFF).build().toByteArray());
-                            for (Map.Entry<String, BluetoothDeviceCache> device : mDevices.entrySet()) {
-                                BluetoothDeviceCache cache = mDevices.remove(device.getKey());
-                                if (cache != null) {
-                                    BluetoothGatt gattServer = cache.gatt;
-                                    gattServer.disconnect();
-                                    gattServer.close();
+                            try {
+                                for (Map.Entry<String, BluetoothDeviceCache> device : mDevices.entrySet()) {
+                                    BluetoothDeviceCache cache = mDevices.remove(device.getKey());
+                                    if (cache != null) {
+                                        BluetoothGatt gattServer = cache.gatt;
+                                        gattServer.disconnect();
+                                        gattServer.close();
+                                    }
                                 }
+                            } catch (ConcurrentModificationException e) {
+                                result.error("concurrentModification", e.getMessage(), e);
                             }
                             break;
                         case BluetoothAdapter.STATE_ON:
