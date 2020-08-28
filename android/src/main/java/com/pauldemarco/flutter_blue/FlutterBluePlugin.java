@@ -739,7 +739,7 @@ public class FlutterBluePlugin implements FlutterPlugin, ActivityAware, MethodCa
                                     }
                                 }
                             } catch (ConcurrentModificationException e) {
-                                result.error("concurrentModification", e.getMessage(), e);
+                                //This is fine
                             }
                             break;
                         case BluetoothAdapter.STATE_ON:
