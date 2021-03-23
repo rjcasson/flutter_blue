@@ -14,8 +14,9 @@ class FlutterBlue {
 
   /// Singleton boilerplate
   FlutterBlue._() {
-    _channel.setMethodCallHandler((MethodCall call) async {
+    _channel.setMethodCallHandler((MethodCall call) {
       _methodStreamController.add(call);
+      return;
     });
 
     _setLogLevelIfAvailable();
@@ -94,7 +95,7 @@ class FlutterBlue {
     ScanMode scanMode = ScanMode.lowLatency,
     List<Guid> withServices = const [],
     List<Guid> withDevices = const [],
-    Duration? timeout,
+    Duration timeout,
     bool allowDuplicates = false,
   }) async* {
     var settings = protos.ScanSettings.create()
@@ -135,7 +136,7 @@ class FlutterBlue {
         .map((buffer) => new protos.ScanResult.fromBuffer(buffer))
         .map((p) {
       final result = new ScanResult.fromProto(p);
-      final list = _scanResults.value ?? [];
+      final list = _scanResults.value;
       int index = list.indexOf(result);
       if (index != -1) {
         list[index] = result;
@@ -159,7 +160,7 @@ class FlutterBlue {
     ScanMode scanMode = ScanMode.lowLatency,
     List<Guid> withServices = const [],
     List<Guid> withDevices = const [],
-    Duration? timeout,
+    Duration timeout,
     bool allowDuplicates = false,
   }) async {
     await scan(
@@ -250,7 +251,6 @@ class DeviceIdentifier {
 }
 
 class ScanResult {
-  const ScanResult({this.device, this.advertisementData, this.rssi});
 
   ScanResult.fromProto(protos.ScanResult p)
       : device = new BluetoothDevice.fromProto(p.device),
@@ -280,19 +280,11 @@ class ScanResult {
 
 class AdvertisementData {
   final String localName;
-  final int? txPowerLevel;
+  final int txPowerLevel;
   final bool connectable;
   final Map<int, List<int>> manufacturerData;
   final Map<String, List<int>> serviceData;
   final List<String> serviceUuids;
-
-  AdvertisementData(
-      {this.localName,
-        this.txPowerLevel,
-        this.connectable,
-        this.manufacturerData,
-        this.serviceData,
-        this.serviceUuids});
 
   AdvertisementData.fromProto(protos.AdvertisementData p)
       : localName = p.localName,

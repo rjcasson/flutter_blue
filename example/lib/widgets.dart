@@ -6,11 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 
 class ScanResultTile extends StatelessWidget {
-  const ScanResultTile({Key? key, required this.result, this.onTap})
-      : super(key: key);
+  const ScanResultTile({Key key, this.result, this.onTap}) : super(key: key);
 
   final ScanResult result;
-  final VoidCallback? onTap;
+  final VoidCallback onTap;
 
   Widget _buildTitle(BuildContext context) {
     if (result.device.name.length > 0) {
@@ -49,7 +48,7 @@ class ScanResultTile extends StatelessWidget {
               style: Theme.of(context)
                   .textTheme
                   .caption
-                  ?.apply(color: Colors.black),
+                  .apply(color: Colors.black),
               softWrap: true,
             ),
           ),
@@ -65,7 +64,7 @@ class ScanResultTile extends StatelessWidget {
 
   String getNiceManufacturerData(Map<int, List<int>> data) {
     if (data.isEmpty) {
-      return 'N/A';
+      return null;
     }
     List<String> res = [];
     data.forEach((id, bytes) {
@@ -77,7 +76,7 @@ class ScanResultTile extends StatelessWidget {
 
   String getNiceServiceData(Map<String, List<int>> data) {
     if (data.isEmpty) {
-      return 'N/A';
+      return null;
     }
     List<String> res = [];
     data.forEach((id, bytes) {
@@ -102,8 +101,12 @@ class ScanResultTile extends StatelessWidget {
             context, 'Complete Local Name', result.advertisementData.localName),
         _buildAdvRow(context, 'Tx Power Level',
             '${result.advertisementData.txPowerLevel ?? 'N/A'}'),
-        _buildAdvRow(context, 'Manufacturer Data',
-            getNiceManufacturerData(result.advertisementData.manufacturerData)),
+        _buildAdvRow(
+            context,
+            'Manufacturer Data',
+            getNiceManufacturerData(
+                    result.advertisementData.manufacturerData) ??
+                'N/A'),
         _buildAdvRow(
             context,
             'Service UUIDs',
@@ -111,7 +114,7 @@ class ScanResultTile extends StatelessWidget {
                 ? result.advertisementData.serviceUuids.join(', ').toUpperCase()
                 : 'N/A'),
         _buildAdvRow(context, 'Service Data',
-            getNiceServiceData(result.advertisementData.serviceData)),
+            getNiceServiceData(result.advertisementData.serviceData) ?? 'N/A'),
       ],
     );
   }
@@ -121,8 +124,7 @@ class ServiceTile extends StatelessWidget {
   final BluetoothService service;
   final List<CharacteristicTile> characteristicTiles;
 
-  const ServiceTile(
-      {Key? key, required this.service, required this.characteristicTiles})
+  const ServiceTile({Key key, this.service, this.characteristicTiles})
       : super(key: key);
 
   @override
@@ -135,8 +137,10 @@ class ServiceTile extends StatelessWidget {
           children: <Widget>[
             Text('Service'),
             Text('0x${service.uuid.toString().toUpperCase().substring(4, 8)}',
-                style: Theme.of(context).textTheme.body1?.copyWith(
-                    color: Theme.of(context).textTheme.caption?.color))
+                style: Theme.of(context)
+                    .textTheme
+                    .body1
+                    .copyWith(color: Theme.of(context).textTheme.caption.color))
           ],
         ),
         children: characteristicTiles,
@@ -154,14 +158,14 @@ class ServiceTile extends StatelessWidget {
 class CharacteristicTile extends StatelessWidget {
   final BluetoothCharacteristic characteristic;
   final List<DescriptorTile> descriptorTiles;
-  final VoidCallback? onReadPressed;
-  final VoidCallback? onWritePressed;
-  final VoidCallback? onNotificationPressed;
+  final VoidCallback onReadPressed;
+  final VoidCallback onWritePressed;
+  final VoidCallback onNotificationPressed;
 
   const CharacteristicTile(
-      {Key? key,
-      required this.characteristic,
-      required this.descriptorTiles,
+      {Key key,
+      this.characteristic,
+      this.descriptorTiles,
       this.onReadPressed,
       this.onWritePressed,
       this.onNotificationPressed})
@@ -183,8 +187,8 @@ class CharacteristicTile extends StatelessWidget {
                 Text('Characteristic'),
                 Text(
                     '0x${characteristic.uuid.toString().toUpperCase().substring(4, 8)}',
-                    style: Theme.of(context).textTheme.body1?.copyWith(
-                        color: Theme.of(context).textTheme.caption?.color))
+                    style: Theme.of(context).textTheme.body1.copyWith(
+                        color: Theme.of(context).textTheme.caption.color))
               ],
             ),
             subtitle: Text(value.toString()),
@@ -196,13 +200,13 @@ class CharacteristicTile extends StatelessWidget {
               IconButton(
                 icon: Icon(
                   Icons.file_download,
-                  color: Theme.of(context).iconTheme.color?.withOpacity(0.5),
+                  color: Theme.of(context).iconTheme.color.withOpacity(0.5),
                 ),
                 onPressed: onReadPressed,
               ),
               IconButton(
                 icon: Icon(Icons.file_upload,
-                    color: Theme.of(context).iconTheme.color?.withOpacity(0.5)),
+                    color: Theme.of(context).iconTheme.color.withOpacity(0.5)),
                 onPressed: onWritePressed,
               ),
               IconButton(
@@ -210,7 +214,7 @@ class CharacteristicTile extends StatelessWidget {
                     characteristic.isNotifying
                         ? Icons.sync_disabled
                         : Icons.sync,
-                    color: Theme.of(context).iconTheme.color?.withOpacity(0.5)),
+                    color: Theme.of(context).iconTheme.color.withOpacity(0.5)),
                 onPressed: onNotificationPressed,
               )
             ],
@@ -224,14 +228,11 @@ class CharacteristicTile extends StatelessWidget {
 
 class DescriptorTile extends StatelessWidget {
   final BluetoothDescriptor descriptor;
-  final VoidCallback? onReadPressed;
-  final VoidCallback? onWritePressed;
+  final VoidCallback onReadPressed;
+  final VoidCallback onWritePressed;
 
   const DescriptorTile(
-      {Key? key,
-      required this.descriptor,
-      this.onReadPressed,
-      this.onWritePressed})
+      {Key key, this.descriptor, this.onReadPressed, this.onWritePressed})
       : super(key: key);
 
   @override
@@ -246,7 +247,7 @@ class DescriptorTile extends StatelessWidget {
               style: Theme.of(context)
                   .textTheme
                   .body1
-                  ?.copyWith(color: Theme.of(context).textTheme.caption?.color))
+                  .copyWith(color: Theme.of(context).textTheme.caption.color))
         ],
       ),
       subtitle: StreamBuilder<List<int>>(
@@ -260,14 +261,14 @@ class DescriptorTile extends StatelessWidget {
           IconButton(
             icon: Icon(
               Icons.file_download,
-              color: Theme.of(context).iconTheme.color?.withOpacity(0.5),
+              color: Theme.of(context).iconTheme.color.withOpacity(0.5),
             ),
             onPressed: onReadPressed,
           ),
           IconButton(
             icon: Icon(
               Icons.file_upload,
-              color: Theme.of(context).iconTheme.color?.withOpacity(0.5),
+              color: Theme.of(context).iconTheme.color.withOpacity(0.5),
             ),
             onPressed: onWritePressed,
           )
@@ -278,7 +279,7 @@ class DescriptorTile extends StatelessWidget {
 }
 
 class AdapterStateTile extends StatelessWidget {
-  const AdapterStateTile({Key? key, required this.state}) : super(key: key);
+  const AdapterStateTile({Key key, @required this.state}) : super(key: key);
 
   final BluetoothState state;
 
@@ -293,7 +294,7 @@ class AdapterStateTile extends StatelessWidget {
         ),
         trailing: Icon(
           Icons.error,
-          color: Theme.of(context).primaryTextTheme.subhead?.color,
+          color: Theme.of(context).primaryTextTheme.subhead.color,
         ),
       ),
     );
